@@ -1,4 +1,4 @@
-Here’s a concise GitHub README for your **GeminiConvoBot** project:
+Here’s a concise GitHub README for your **ConvoBot** project:
 
 ```markdown
 # ConvoBot: An Intelligent Conversational Chatbot

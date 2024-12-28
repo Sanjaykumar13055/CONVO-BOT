@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="main-container">
+        <nav class="sidebar">
+            <div class="logo">
+                <i class="fas fa-robot"></i>
+                <h2>Convobot AI</h2>
+            </div>
+            <!-- User Info Section -->
+            <div class="user-info">
+                <i class="fas fa-user-circle"></i>
+                <div class="user-details">
+                    <span id="user-login">Sanjaykumar</span>
+                    <span id="current-time" class="time-display"></span>
+                </div>
+            </div>
+            <div class="new-chat">
+                <button id="new-chat-btn">
+                    <i class="fas fa-plus"></i> New Chat
+                </button>
+            </div>
+            <div class="history-list">
+                <!-- Chat history items will be added here -->
+            </div>
+            <div class="theme-toggle">
+                <button id="theme-toggle-btn">
+                    <i class="fas fa-moon"></i>
+                    <span>Dark Mode</span>
+                </button>
+            </div>
+        </nav>
+
+        <div class="chat-container">
+            <header>
+                <h1>Convo Assistant</h1>
+                <div class="header-info">
+                    <span id="date-display"></span>
+                    <span id="utc-time"></span>
+                </div>
+            </header>
+
+            <div class="chat-area" id="chat-history">
+                <div class="welcome-message">
+                    <i class="fas fa-robot"></i>
+                    <h2>Hello, I'm Convobot</h2>
+                    <p>Ask me anything - I'm here to assist!</p>
+
+                </div>
+                {% for role, text in chat_history %}
+                <div class="message {{role|lower}}-message">
+                    <div class="message-content">
+                        <div class="message-header">
+                            <i class="fas fa-{% if role == 'You' %}user{% else %}robot{% endif %}"></i>
+                            <span>{{ role }}</span>
+                            <span class="message-time"></span>
+                            {% if role == 'Bot' %}
+                            <button class="copy-btn" onclick="copyToClipboard(this)">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                        <p>{{ text }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="input-area">
+                <form id="chat-form">
+                    <div class="input-wrapper">
+                        <input type="text" id="question" name="question" 
+                               placeholder="Type your message here..." required
+                               maxlength="1000">
+                        <button type="submit">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            // Initialize date and time displays
+            function updateDateTime() {
+                const now = new Date();
+                const utcString = now.toUTCString();
+                const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+                const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+                
+                $('#date-display').text(now.toLocaleDateString(undefined, dateOptions));
+                $('#utc-time').text(`UTC: ${now.toLocaleTimeString('en-US', timeOptions)}`);
+                $('#welcome-datetime').text(`Connected on: ${utcString}`);
+                $('#current-time').text(now.toLocaleTimeString('en-US', timeOptions));
+            }
+
+            // Update date and time every second
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+
+            // Character counter
+            $('#question').on('input', function() {
+                const maxLength = 1000;
+                const remaining = maxLength - $(this).val().length;
+                
+                if (!$('.char-counter').length) {
+                    $('.input-wrapper').append(`<div class="char-counter"></div>`);
+                }
+                
+                $('.char-counter').text(`${remaining} characters remaining`);
+                
+                if (remaining < 100) {
+                    $('.char-counter').addClass('warning');
+                } else {
+                    $('.char-counter').removeClass('warning');
+                }
+            });
+
+            // Theme toggle
+            $('#theme-toggle-btn').click(function() {
+                const body = $('body');
+                const icon = $(this).find('i');
+                const span = $(this).find('span');
+                
+                if (body.attr('data-theme') === 'dark') {
+                    body.removeAttr('data-theme');
+                    icon.removeClass('fa-sun').addClass('fa-moon');
+                    span.text('Dark Mode');
+                } else {
+                    body.attr('data-theme', 'dark');
+                    icon.removeClass('fa-moon').addClass('fa-sun');
+                    span.text('Light Mode');
+                }
+            });
+
+            // Chat form submission
+            $('#chat-form').on('submit', function (e) {
+                e.preventDefault();
+                const question = $('#question').val();
+                
+                // Add loading state
+                const loadingMessage = $('<div class="message loading-message"><div class="loading-dots"><div></div><div></div><div></div></div></div>');
+                $('#chat-history').append(loadingMessage);
+                
+                $.ajax({
+                    url: '/ask',
+                    type: 'POST',
+                    data: { question: question },
+                    success: function (data) {
+                        // Remove loading message
+                        $('.loading-message').remove();
+                        
+                        // Clear chat history and add new messages
+                        $('#chat-history').empty();
+                        data.chat_history.forEach(function (entry) {
+                            const messageClass = entry[0].toLowerCase() === 'you' ? 'user-message' : 'bot-message';
+                            const icon = entry[0].toLowerCase() === 'you' ? 'user' : 'robot';
+                            const currentTime = new Date().toLocaleTimeString([], { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                            });
+                            
+                            const messageHtml = `
+                                <div class="message ${messageClass}">
+                                    <div class="message-content">
+                                        <div class="message-header">
+                                            <i class="fas fa-${icon}"></i>
+                                            <span>${entry[0]}</span>
+                                            <span class="message-time">${currentTime}</span>
+                                            ${entry[0].toLowerCase() === 'bot' ? 
+                                                `<button class="copy-btn" onclick="copyToClipboard(this)">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>` : 
+                                                ''
+                                            }
+                                        </div>
+                                        <p>${entry[1]}</p>
+                                    </div>
+                                </div>`;
+                            $('#chat-history').append(messageHtml);
+                        });
+                        
+                        // Clear input and scroll to bottom
+                        $('#question').val('');
+                        $('#chat-history').scrollTop($('#chat-history')[0].scrollHeight);
+                    },
+                    error: function (xhr) {
+                        $('.loading-message').remove();
+                        alert(xhr.responseJSON.error);
+                    }
+                });
+            });
+
+            // New chat button functionality
+            $('#new-chat-btn').click(function() {
+                $('#chat-history').empty();
+                $('.welcome-message').show();
+            });
+        });
+
+        // Copy to clipboard function
+        function copyToClipboard(button) {
+            const messageText = $(button).closest('.message-content').find('p').text();
+            navigator.clipboard.writeText(messageText).then(() => {
+                const icon = $(button).find('i');
+                icon.removeClass('fa-copy').addClass('fa-check');
+                setTimeout(() => {
+                    icon.removeClass('fa-check').addClass('fa-copy');
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

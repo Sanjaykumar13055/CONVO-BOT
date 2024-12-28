@@ -23,12 +23,12 @@ ConvoBot is a web-based conversational AI, It allows users to interact with an i
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/GeminiConvoBot.git
+   git clone https://github.com/your-username/ConvoBot.git
    ```
 
 2. Navigate into the project directory:
    ```bash
-   cd GeminiConvoBot
+   cd ConvoBot
    ```
 
 3. Install required Python dependencies:
@@ -46,7 +46,7 @@ ConvoBot is a web-based conversational AI, It allows users to interact with an i
 ## Usage
 
 - Enter any question or statement in the chat window.
-- The bot will process the input using Gemini AI and provide a relevant response.
+- The bot will process the input using AI model and provide a relevant response.
 - Toggle dark mode as per your preference.
 
 ## Contributing
